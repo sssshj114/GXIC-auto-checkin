@@ -16,7 +16,7 @@ from auto_checkin.config import (
     LOGIN_PASSWORD,
     PHOTO_ADDRESS,
     LOGIN_INTERVAL,
-    SCRIPT_DIR,
+    DATA_DIR,
     BASE_URL,
     COOKIE_PERSIST_ENABLED,
 )
@@ -132,7 +132,7 @@ def auto_login(session_manager: SessionManager) -> bool:
 
 def _update_env(key: str, value: str):
     """更新 .env 文件中指定 key 的值"""
-    env_path = os.path.join(SCRIPT_DIR, ".env")
+    env_path = os.path.join(DATA_DIR, ".env")
     try:
         lines = []
         found = False
