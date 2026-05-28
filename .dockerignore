@@ -1,0 +1,13 @@
+# 不打包进镜像的文件
+.env
+.env.example
+*.log
+checkin_state.json
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.gitignore
+.claude/
+系统使用说明手册.md
+*.md

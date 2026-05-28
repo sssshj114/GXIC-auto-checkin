@@ -1,0 +1,19 @@
+# 运行时数据目录
+data/
+
+# 日志
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/

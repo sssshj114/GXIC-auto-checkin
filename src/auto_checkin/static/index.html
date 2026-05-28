@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>自动签到系统</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ===== 少女粉紫配色系统 ===== */
+        :root {
+            /* 背景层级 */
+            --bg-base:     #fdf2fb;
+            --bg-gradient: #f0ebff;
+            --bg-panel:    rgba(255, 255, 255, 0.72);
+            --bg-elevated: rgba(255, 255, 255, 0.5);
+            --bg-card:     rgba(255, 255, 255, 0.9);
+            --bg-input:    rgba(255, 255, 255, 0.5);
+
+            /* 边框 */
+            --border:      rgba(220, 150, 200, 0.28);
+            --border-h:    rgba(220, 150, 200, 0.55);
+            --border-accent: rgba(232, 121, 160, 0.35);
+
+            /* 文字 */
+            --text-1:      #3d2b4a;
+            --text-2:      #6b5880;
+            --text-3:      #b09fc0;
+            --text-4:      rgba(180, 150, 200, 0.5);
+
+            /* 主色：玫瑰粉 */
+            --rose:        #e879a0;
+            --rose-dim:    rgba(232, 121, 160, 0.10);
+            --rose-mid:    rgba(232, 121, 160, 0.22);
+
+            /* 功能色 */
+            --green:       #22C55E;
+            --green-dim:   rgba(34, 197, 94, 0.10);
+            --green-mid:   rgba(34, 197, 94, 0.20);
+
+            --sky:         #38BDF8;
+            --sky-dim:     rgba(56, 189, 248, 0.08);
+            --sky-mid:     rgba(56, 189, 248, 0.18);
+
+            --amber:       #fb923c;
+            --amber-dim:   rgba(251, 146, 60, 0.12);
+
+            --red:         #fb7185;
+            --red-dim:     rgba(251, 113, 133, 0.10);
+
+            --violet:      #a855f7;
+            --violet-dim:  rgba(168, 85, 247, 0.08);
+
+            /* 阴影 */
+            --shadow-sm:   0 2px 16px rgba(200, 130, 180, 0.12);
+            --shadow-md:   0 4px 24px rgba(200, 130, 180, 0.15);
+            --shadow-glow: 0 0 20px rgba(232, 121, 160, 0.08);
+
+            /* 终端 */
+            --term-bg:     #1c0f24;
+            --term-border: rgba(232, 121, 160, 0.18);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { height: 100%; }
+
+        body {
+            font-family: 'Noto Sans SC', 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--bg-base) 0%, var(--bg-gradient) 100%);
+            background-attachment: fixed;
+            color: var(--text-1);
+            padding: 10px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(circle at 10% 20%, rgba(232,121,160,0.07) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(168,85,247,0.06) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.4) 0%, transparent 60%);
+        }
+        body > * { position: relative; z-index: 1; }
+
+        /* ===== 顶部导航栏 ===== */
+        .topbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 12px;
+            padding: 10px 14px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm), var(--shadow-glow);
+            font-size: 0.75rem;
+            color: var(--text-2);
+            flex-shrink: 0;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-1);
+            letter-spacing: -0.01em;
+        }
+        .brand-icon {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, var(--rose) 0%, var(--violet) 100%);
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 12px rgba(232,121,160,0.35);
+        }
+        .brand-icon svg { width: 15px; height: 15px; color: white; }
+        .brand-name { color: var(--text-1); }
+        .brand-sep { color: var(--text-4); font-weight: 400; }
+
+        .topbar-row1 { display: flex; align-items: center; gap: 10px; flex: 1; flex-wrap: wrap; }
+        .topbar-row2 { display: flex; align-items: center; gap: 8px; width: 100%; }
+
+        /* 状态指示器 */
+        .stat {
+            display: flex; align-items: center; gap: 5px;
+            white-space: nowrap;
+            padding: 3px 8px;
+            background: rgba(255,255,255,0.4);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.72rem;
+        }
+        .stat svg { width: 11px; height: 11px; flex-shrink: 0; }
+        .stat-clock { color: var(--rose); }
+        .stat-clock svg { color: var(--rose); }
+        .stat strong { font-weight: 600; color: var(--text-1); }
+
+        /* 模式标签 */
+        #modeTag {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.69rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        .mode-fast  {
+            background: rgba(251,146,60,.15);
+            color: #ea7c32;
+            border: 1px solid rgba(251,146,60,.3);
+        }
+        .mode-slow  {
+            background: var(--sky-dim);
+            color: #0ea5e9;
+            border: 1px solid rgba(56,189,248,.25);
+        }
+        .mode-sleep {
+            background: rgba(168,85,247,.1);
+            color: var(--violet);
+            border: 1px solid rgba(168,85,247,.22);
+        }
+        #modeTag .mode-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 4px currentColor;
+        }
+
+        .spacer { flex: 1; }
+
+        .server-addr {
+            font-size: 0.66rem;
+            color: var(--text-3);
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            padding: 2px 6px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 4px;
+        }
+
+        /* Token 输入 */
+        .token-input {
+            flex: 1; min-width: 80px; max-width: 200px;
+            padding: 5px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-1);
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .token-input::placeholder { color: var(--text-3); }
+        .token-input:focus {
+            border-color: var(--rose);
+            box-shadow: 0 0 0 3px rgba(232,121,160,0.12);
+        }
+
+        .save-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px;
+            font-size: 0.72rem; font-weight: 500;
+            font-family: inherit;
+            background: var(--rose-mid);
+            color: var(--rose);
+            border: 1px solid rgba(232,121,160,0.35);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .save-btn:hover {
+            background: rgba(232,121,160,0.32);
+            box-shadow: 0 0 12px rgba(232,121,160,0.2);
+        }
+        .save-btn:active { opacity: .8; transform: scale(.97); }
+
+        /* ===== 标签切换（手机端） ===== */
+        .tab-bar {
+            display: none;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px 0;
+            font-size: 0.78rem; font-weight: 500;
+            font-family: inherit;
+            background: var(--bg-panel);
+            color: var(--text-3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .tab-btn.active {
+            background: var(--rose-mid);
+            color: var(--rose);
+            border-color: rgba(232,121,160,0.4);
+        }
+
+        /* ===== 统计面板 ===== */
+        .stats-panel {
+            flex-shrink: 0;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px) saturate(160%);
+            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            box-shadow: var(--shadow-md);
+            display: flex; flex-direction: column;
+            overflow: hidden; min-height: 0;
+        }
+
+        .panel-hdr {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 12px; flex-shrink: 0;
+        }
+        .panel-hdr h2 {
+            font-size: 0.82rem; font-weight: 600;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            flex: 1;
+        }
+
+        /* 状态指示灯 */
+        .indicator {
+            width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+        }
+        .indicator-green {
+            background: var(--rose);
+            box-shadow: 0 0 6px var(--rose), 0 0 12px rgba(232,121,160,0.3);
+        }
+        .indicator-sky {
+            background: var(--violet);
+            box-shadow: 0 0 6px var(--violet), 0 0 12px rgba(168,85,247,0.3);
+            animation: blink 2.2s ease infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+        /* ===== 统计卡片网格 ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+            gap: 8px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 10px;
+            text-align: center;
+            transition: border-color .2s, box-shadow .2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 2px;
+            background: var(--border);
+            transition: background .2s;
+        }
+        .stat-card.success::before { background: linear-gradient(90deg, var(--green), transparent); }
+        .stat-card.info::before    { background: linear-gradient(90deg, var(--violet), transparent); }
+        .stat-card.warning::before { background: linear-gradient(90deg, var(--amber), transparent); }
+        .stat-card.danger::before  { background: linear-gradient(90deg, var(--red), transparent); }
+
+        .stat-card-title {
+            font-size: 0.62rem;
+            color: var(--text-3);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+        .stat-card-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-1);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+        }
+        .stat-card.success .stat-card-value { color: var(--green); }
+        .stat-card.info    .stat-card-value { color: var(--violet); }
+        .stat-card.warning .stat-card-value { color: var(--amber); }
+        .stat-card.danger  .stat-card-value { color: var(--red); }
+
+        .stat-card-sub {
+            font-size: 0.6rem;
+            color: var(--text-3);
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ===== 操作记录 ===== */
+        .ops-section { margin-top: 12px; flex-shrink: 0; }
+        .ops-header {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 8px;
+        }
+        .ops-title {
+            font-size: 0.72rem; font-weight: 600;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .ops-count {
+            font-size: 0.62rem;
+            color: var(--text-3);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .ops-list {
+            max-height: 200px; overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+        }
+        .ops-empty {
+            padding: 16px; text-align: center;
+            color: var(--text-3); font-size: 0.72rem;
+        }
+        .ops-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; font-size: 0.7rem;
+            border-bottom: 1px solid rgba(220,150,200,0.1);
+            transition: background .12s;
+        }
+        .ops-row:last-child { border-bottom: none; }
+        .ops-row:hover { background: rgba(232,121,160,0.04); }
+
+        .ops-time {
+            color: var(--text-3);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.62rem; flex-shrink: 0; width: 88px;
+        }
+        .ops-badge {
+            padding: 1px 7px; border-radius: 4px;
+            font-size: 0.6rem; font-weight: 600; flex-shrink: 0;
+            text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .ops-badge-checkin  { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+        .ops-badge-exam     { background: var(--violet-dim); color: var(--violet); border: 1px solid rgba(168,85,247,0.2); }
+        .ops-badge-material { background: var(--rose-dim); color: var(--rose); border: 1px solid rgba(232,121,160,0.2); }
+
+        .ops-course {
+            color: var(--text-1); font-weight: 500; flex-shrink: 0;
+            max-width: 90px; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+        .ops-detail {
+            color: var(--text-2); flex: 1; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+            font-size: 0.68rem;
+        }
+        .ops-status { flex-shrink: 0; font-size: 0.62rem; font-weight: 700; }
+        .ops-ok   { color: var(--green); }
+        .ops-fail { color: var(--red); }
+
+        /* ===== 主体区域 ===== */
+        .main {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            min-height: 0;
+        }
+
+        /* ===== 课表面板 ===== */
+        .schedule-panel { flex: 2.2; }
+
+        .refresh-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 11px; font-size: 0.69rem; font-weight: 500;
+            font-family: inherit;
+            background: var(--rose-dim);
+            color: var(--rose);
+            border: 1px solid rgba(232,121,160,0.3);
+            border-radius: 6px; cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .refresh-btn:hover {
+            background: var(--rose-mid);
+            box-shadow: 0 0 12px rgba(232,121,160,0.2);
+        }
+        .refresh-btn:active { transform: scale(.96); }
+        .refresh-btn.loading { opacity: .45; pointer-events: none; }
+        .refresh-btn svg { width: 11px; height: 11px; }
+        .refresh-btn.loading svg { animation: spin .8s linear infinite; }
+
+        .schedule-wrap {
+            flex: 1; overflow: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.9);
+            -webkit-overflow-scrolling: touch;
+        }
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px; padding: 12px;
+        }
+        .schedule-empty {
+            padding: 32px; text-align: center;
+            color: #c9a0c0; font-size: 0.78rem;
+        }
+
+        /* 课表表格 */
+        table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+        th {
+            background: linear-gradient(135deg, #fdf2fb 0%, #f5efff 100%);
+            padding: 10px 6px; font-weight: 600;
+            text-align: center;
+            border: 1px solid rgba(220,150,200,0.2);
+            color: var(--text-2);
+            font-size: 0.69rem;
+        }
+        td {
+            border: 1px solid rgba(220,150,200,0.15);
+            padding: 3px; text-align: center;
+            height: 54px; vertical-align: middle;
+        }
+
+        /* 课程卡片 */
+        .course-link {
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            min-height: 46px; padding: 5px 8px;
+            background: linear-gradient(135deg, #fff0f8 0%, #f5f0ff 100%);
+            color: #7c3d6e;
+            border-radius: 6px;
+            border-left: 2px solid var(--rose);
+            position: relative;
+            font-size: 0.74rem;
+            font-weight: 500;
+            line-height: 1.35;
+            cursor: pointer;
+            transition: all .18s;
+        }
+        .course-link:hover {
+            background: linear-gradient(135deg, #fde8f5 0%, #ece4ff 100%);
+            box-shadow: 0 4px 12px rgba(232,121,160,0.18);
+            transform: translateY(-1px);
+        }
+        .course-checked {
+            background: rgba(34,197,94,0.08) !important;
+            color: #86EFAC !important;
+            border-left-color: var(--green) !important;
+        }
+        .course-checked::after {
+            content: "";
+            position: absolute; bottom: 4px; right: 5px;
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 4px var(--green);
+        }
+
+        /* 课程徽章 */
+        .mat-badge, .exam-badge {
+            position: absolute;
+            font-size: 0.55rem !important;
+            font-weight: 700 !important;
+            padding: 1px 5px !important;
+            border-radius: 3px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 2px !important;
+            line-height: 1;
+        }
+        .mat-badge  {
+            top: 3px; left: 3px;
+            background: #fce7f3;
+            color: #be185d;
+            border: 1px solid rgba(232,121,160,0.25);
+        }
+        .exam-badge {
+            top: 3px; right: 3px;
+            background: #ede9fe;
+            color: #6d28d9;
+            border: 1px solid rgba(167,139,250,0.25);
+        }
+        .mat-badge svg, .exam-badge svg { width: 7px; height: 7px; }
+
+        /* 补签/作业按钮 */
+        .card-actions {
+            position: absolute; bottom: 2px; left: 2px; right: 2px;
+            display: flex; justify-content: space-between;
+            pointer-events: none; z-index: 2;
+        }
+        .card-btn {
+            pointer-events: auto;
+            font-size: 0.68rem; font-weight: 600;
+            padding: 4px 10px; border-radius: 5px;
+            border: 1px solid rgba(232,121,160,0.25);
+            cursor: pointer; transition: all 0.15s;
+            font-family: inherit; line-height: 1.4;
+        }
+        .retro-btn {
+            background: rgba(232,121,160,0.12); color: var(--rose);
+            border-color: rgba(232,121,160,0.25);
+        }
+        .retro-btn:hover { background: rgba(232,121,160,0.25); }
+        .hw-btn {
+            background: rgba(168,85,247,0.1); color: var(--violet);
+            border-color: rgba(168,85,247,0.2);
+        }
+        .hw-btn:hover { background: rgba(168,85,247,0.22); }
+        .card-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* 作业补做弹窗 */
+        .hw-modal {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .hw-modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px;
+            width: 90%; max-width: 480px; max-height: 70vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 8px 32px rgba(200,130,180,0.25);
+        }
+        .hw-modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .hw-modal-header h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-1); margin: 0; }
+        .hw-close {
+            background: none; border: none; font-size: 1.2rem; color: var(--text-3);
+            cursor: pointer; padding: 4px 8px;
+        }
+        .hw-item-list {
+            flex: 1; overflow-y: auto;
+            border: 1px solid var(--border); border-radius: 8px;
+            margin-bottom: 14px;
+        }
+        .hw-item-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px; font-size: 0.75rem;
+            border-bottom: 1px solid rgba(220,150,200,0.1);
+            cursor: pointer;
+        }
+        .hw-item-row:hover { background: rgba(232,121,160,0.04); }
+        .hw-item-type {
+            font-size: 0.6rem; font-weight: 600; padding: 1px 6px;
+            border-radius: 3px; background: var(--violet-dim); color: var(--violet);
+            border: 1px solid rgba(168,85,247,0.2); white-space: nowrap;
+        }
+        .hw-item-name { flex: 1; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hw-modal-footer { text-align: center; }
+        .hw-submit-btn {
+            padding: 8px 24px; font-size: 0.8rem; font-weight: 600;
+            font-family: inherit;
+            background: linear-gradient(135deg, var(--rose), var(--violet));
+            color: white; border: none; border-radius: 8px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .hw-submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .hw-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .hw-loading, .hw-empty { padding: 24px; text-align: center; color: var(--text-3); font-size: 0.78rem; }
+        .scan-all-btn { margin-left: 4px; }
+        .scan-all-btn svg { width: 11px; height: 11px; }
+
+        /* 全部扫描弹窗 */
+        .scan-modal {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .scan-modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px;
+            width: 92%; max-width: 520px; max-height: 80vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 8px 32px rgba(200,130,180,0.25);
+        }
+        .scan-modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .scan-modal-header h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-1); margin: 0; }
+        .scan-close { background: none; border: none; font-size: 1.2rem; color: var(--text-3); cursor: pointer; padding: 4px 8px; }
+        .scan-summary { font-size: 0.72rem; color: var(--text-2); margin-bottom: 10px; }
+        .scan-item-list { flex: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; }
+        .scan-course-group { padding: 8px 10px; border-bottom: 2px solid rgba(232,121,160,0.15); }
+        .scan-course-name { font-size: 0.72rem; font-weight: 600; color: var(--rose); margin-bottom: 4px; }
+        .scan-item-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 0.72rem; }
+        .scan-item-cat { font-size: 0.58rem; font-weight: 600; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+        .scan-cat-exam { background: var(--violet-dim); color: var(--violet); border: 1px solid rgba(168,85,247,0.2); }
+        .scan-cat-material { background: #dbeafe; color: #2563eb; border: 1px solid rgba(37,99,235,0.2); }
+        .scan-cat-signin { background: #dcfce7; color: #16a34a; border: 1px solid rgba(22,163,74,0.2); }
+        .scan-item-name { flex: 1; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .scan-modal-footer { text-align: center; display: flex; gap: 8px; justify-content: center; }
+        .scan-process-btn {
+            padding: 8px 24px; font-size: 0.8rem; font-weight: 600; font-family: inherit;
+            background: linear-gradient(135deg, var(--rose), var(--violet));
+            color: white; border: none; border-radius: 8px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .scan-process-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .scan-process-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .scan-cancel-btn {
+            padding: 8px 18px; font-size: 0.8rem; font-weight: 500; font-family: inherit;
+            background: transparent; color: var(--text-2);
+            border: 1px solid var(--border); border-radius: 8px;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .scan-cancel-btn:hover { background: rgba(0,0,0,0.04); }
+
+        /* ===== 日志面板 ===== */
+        .log-panel { flex: 1.3; }
+
+        /* 过滤按钮 */
+        .log-filters {
+            display: flex; gap: 5px;
+            margin-bottom: 10px; flex-shrink: 0; flex-wrap: wrap;
+        }
+        .fbtn {
+            padding: 4px 10px; font-size: 0.66rem; font-weight: 500;
+            font-family: inherit;
+            border-radius: 5px; cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-3);
+            transition: all .13s;
+        }
+        .fbtn:hover {
+            background: var(--rose-dim);
+            color: var(--rose);
+            border-color: rgba(232,121,160,0.3);
+        }
+        .fbtn.active {
+            background: var(--rose-mid);
+            color: var(--rose);
+            border-color: rgba(232,121,160,0.4);
+        }
+
+        /* 终端 */
+        .term {
+            flex: 1; min-height: 0;
+            background: var(--term-bg);
+            border: 1px solid var(--term-border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 0.71rem; line-height: 1.8;
+            white-space: pre-wrap; word-break: break-all;
+            -webkit-overflow-scrolling: touch;
+        }
+        /* 终端顶部装饰 */
+        .term-header {
+            flex-shrink: 0;
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 12px;
+            background: rgba(28, 15, 36, 0.9);
+            border: 1px solid var(--term-border);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+        }
+        .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .term-dot-r { background: #FF5F57; }
+        .term-dot-y { background: #FEBC2E; }
+        .term-dot-g { background: #28C840; }
+        .term-header + .term {
+            border-radius: 0 0 8px 8px;
+            border-top: none;
+        }
+        .term-title {
+            flex: 1; text-align: center;
+            font-size: 0.62rem; color: rgba(232,121,160,0.4);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* 日志颜色 */
+        .ll  { display: block; }
+        .ts  { color: #334155; }
+        .ok  { color: #4ADE80; }
+        .err { color: #F87171; }
+        .wrn { color: #FCD34D; }
+        .hot { color: #FB923C; }
+        .ai  { color: #C084FC; }
+        .scn { color: #60A5FA; }
+        .slp { color: #334155; }
+        .lgn { color: #34D399; }
+        .def { color: #475569; }
+
+        /* ===== 滚动条 ===== */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(232,121,160,0.25);
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(232,121,160,0.5); }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== 底部 Tab 导航（手机 / 平板） ===== */
+        .tab-bar {
+            display: none; /* 桌面隐藏，手机通过媒体查询显示 */
+        }
+        /* 底部导航样式 */
+        .tab-bar-nav {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 200;
+            background: var(--bg-panel);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-top: 1px solid var(--border);
+            padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+            gap: 4px;
+        }
+        .tab-btn {
+            flex: 1;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 4px 6px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            font-family: inherit;
+            background: transparent;
+            color: var(--text-3);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .tab-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .tab-btn.active {
+            background: var(--rose-mid);
+            color: var(--rose);
+        }
+        .tab-btn.active svg { stroke: var(--rose); }
+
+        /* ===== 手机端 ===== */
+        @media (max-width: 640px) {
+            body {
+                padding: 8px 8px 0;
+                gap: 7px;
+                height: auto;
+                min-height: 100dvh;
+                /* 底部留出 tab 导航的空间 */
+                padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+            }
+
+            /* 顶部栏精简 */
+            .topbar { padding: 8px 12px; border-radius: 12px; }
+            .server-addr { display: none; }
+            .stat-hide-mobile { display: none; }
+            .token-input { max-width: none; }
+            .topbar-row1 { gap: 6px; }
+
+            /* 底部 tab 栏 */
+            .tab-bar-nav { display: flex; }
+
+            /* 主内容竖向排列 */
+            .main {
+                flex-direction: column;
+                overflow: visible;
+                flex: none;
+            }
+
+            /* 面板高度：视口减去 topbar(≈52px) + token行(≈38px) + 底栏(≈66px) + 间距 */
+            .schedule-panel,
+            .log-panel {
+                flex: none;
+                height: calc(100dvh - 52px - 38px - 66px - 44px);
+                min-height: 280px;
+            }
+            .stats-panel { flex: none; }
+
+            /* 隐藏逻辑（由 JS 控制 tab-hidden class） */
+            .schedule-panel.tab-hidden,
+            .log-panel.tab-hidden,
+            .stats-panel.tab-hidden { display: none !important; }
+
+            /* 统计卡片：手机 3 列 */
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .stat-card { padding: 10px 6px; }
+            .stat-card-value { font-size: 1.15rem; }
+
+            /* 操作记录高度 */
+            .ops-list { max-height: 160px; }
+
+            /* 终端 */
+            .term { font-size: 0.67rem; line-height: 1.7; padding: 10px 10px; }
+            .term-header { padding: 7px 10px; }
+
+            /* 课表 */
+            td { height: 44px; }
+            .course-link { font-size: 0.7rem; min-height: 36px; padding: 4px 6px; }
+            .schedule-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 8px; }
+
+            /* 过滤按钮：更大的触摸区域 */
+            .fbtn { padding: 6px 12px; font-size: 0.72rem; min-height: 34px; }
+
+            /* 刷新按钮 */
+            .refresh-btn { padding: 6px 13px; font-size: 0.72rem; }
+        }
+
+        /* ===== 平板端 ===== */
+        @media (min-width: 641px) and (max-width: 1023px) {
+            body {
+                height: auto;
+                min-height: 100dvh;
+                padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+            }
+            .tab-bar-nav { display: flex; }
+            .main { flex-direction: column; overflow: visible; flex: none; }
+            .schedule-panel { flex: none; height: 52vh; }
+            .log-panel      { flex: none; height: 52vh; }
+            .schedule-panel.tab-hidden,
+            .log-panel.tab-hidden,
+            .stats-panel.tab-hidden { display: none !important; }
+            .stats-grid { grid-template-columns: repeat(6, 1fr); }
+        }
+
+        /* ===== 桌面端 ===== */
+        @media (min-width: 1024px) {
+            body { height: 100vh; overflow: hidden; padding: 10px; }
+            .main { flex: 1; overflow: hidden; }
+            /* 桌面端 stats 面板不参与 tab 切换，始终显示 */
+            .stats-panel { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 顶部导航栏 -->
+<div class="topbar">
+    <div class="topbar-row1">
+        <!-- 品牌 -->
+        <div class="brand">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+            </div>
+            <span class="brand-name">AutoCheckin</span>
+            <span class="brand-sep">/</span>
+            <span style="color:var(--text-2);font-weight:400;font-size:0.78rem;">Pixe1</span>
+        </div>
+
+        <!-- 时钟 -->
+        <div class="stat stat-clock">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span id="clock">--:--:--</span>
+        </div>
+
+        <!-- 模式 -->
+        <span id="modeTag" class="mode-sleep">
+            <span class="mode-dot"></span>
+            待机中
+        </span>
+
+        <!-- 课程数（桌面显示） -->
+        <div class="stat stat-hide-mobile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--rose);opacity:.7">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+            <span style="color:var(--text-2)">课程</span>
+            <strong id="courseCount">—</strong>
+            <span style="color:var(--text-2)">门</span>
+        </div>
+
+        <!-- Cookie 状态 -->
+        <div class="stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--rose);opacity:.7">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span id="loginLabel" style="color:var(--text-2)">Cookie 未知</span>
+        </div>
+
+        <div class="spacer"></div>
+        <div class="server-addr">127.0.0.1:8080</div>
+    </div>
+
+    <!-- Token 行 -->
+    <div class="topbar-row2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;color:var(--text-3);flex-shrink:0">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+        </svg>
+        <input type="password" id="tokenInput" class="token-input" placeholder="输入 Token 后按 Enter…">
+        <button class="save-btn" style="flex-shrink:0" onclick="saveToken()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            保存
+        </button>
+    </div>
+</div>
+
+<!-- 底部导航 Tab（手机 / 平板） -->
+<div class="tab-bar-nav" id="tabBar">
+    <button class="tab-btn active" onclick="switchTab('schedule')" id="tabBtnSchedule">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+        课表
+    </button>
+    <button class="tab-btn" onclick="switchTab('stats')" id="tabBtnStats">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        统计
+    </button>
+    <button class="tab-btn" onclick="switchTab('log')" id="tabBtnLog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+        日志
+    </button>
+</div>
+
+<!-- 统计面板 -->
+<div class="panel stats-panel" id="statsPanel">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-title">运行时间</div>
+            <div class="stat-card-value" id="statUptime">--</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-card-title">签到成功</div>
+            <div class="stat-card-value" id="statCheckinSuccess">0</div>
+            <div class="stat-card-sub" id="statCheckinRate">--</div>
+        </div>
+        <div class="stat-card info">
+            <div class="stat-card-title">AI 答题</div>
+            <div class="stat-card-value" id="statExamSuccess">0</div>
+            <div class="stat-card-sub" id="statExamQuestions">共 0 题</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-title">资料回复</div>
+            <div class="stat-card-value" id="statMaterialSuccess">0</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-card-title">API 缓存</div>
+            <div class="stat-card-value" id="statCacheHits">0</div>
+            <div class="stat-card-sub" id="statCacheRate">--</div>
+        </div>
+        <div class="stat-card danger">
+            <div class="stat-card-title">错误次数</div>
+            <div class="stat-card-value" id="statErrors">0</div>
+        </div>
+    </div>
+
+    <!-- 操作记录 -->
+    <div class="ops-section">
+        <div class="ops-header">
+            <span class="ops-title">操作记录</span>
+            <span class="ops-count" id="opsCount"></span>
+        </div>
+        <div class="ops-list" id="opsList">
+            <div class="ops-empty">暂无操作记录</div>
+        </div>
+    </div>
+</div>
+
+<!-- 主内容区 -->
+<div class="main">
+    <!-- 左：课表 -->
+    <div class="panel schedule-panel" id="schedulePanel">
+        <div class="panel-hdr">
+            <div class="indicator indicator-green"></div>
+            <h2>课表监控</h2>
+            <button id="refreshBtn" class="refresh-btn" onclick="refreshSchedule()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                刷新课表
+            </button>
+            <button id="scanAllBtn" class="refresh-btn scan-all-btn" onclick="scanAllCourses()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                全部扫描
+            </button>
+        </div>
+        <div class="schedule-wrap" id="scheduleBox">
+            <p style="padding:32px;text-align:center;color:#c9a0c0;font-size:0.78rem;">正在加载课表…</p>
+        </div>
+    </div>
+
+    <!-- 右：日志 -->
+    <div class="panel log-panel" id="logPanel">
+        <div class="panel-hdr">
+            <div class="indicator indicator-sky"></div>
+            <h2>运行日志</h2>
+        </div>
+        <div class="log-filters">
+            <button class="fbtn active" data-f="all">全部</button>
+            <button class="fbtn" data-f="checkin">签到</button>
+            <button class="fbtn" data-f="error">异常</button>
+            <button class="fbtn" data-f="login">登录</button>
+            <button class="fbtn" data-f="ai">AI答题</button>
+        </div>
+        <div class="term-header">
+            <div class="term-dot term-dot-r"></div>
+            <div class="term-dot term-dot-y"></div>
+            <div class="term-dot term-dot-g"></div>
+            <div class="term-title">system.log — AutoCheckin</div>
+        </div>
+        <div class="term" id="termBox">等待日志输出…</div>
+    </div>
+</div>
+
+<script>
+// --- 是否手机/平板模式（显示底部导航） ---
+function isMobileLayout() {
+    return window.innerWidth < 1024;
+}
+
+// --- 标签切换 ---
+function switchTab(tab) {
+    const schedulePanel = document.getElementById('schedulePanel');
+    const statsPanel    = document.getElementById('statsPanel');
+    const logPanel      = document.getElementById('logPanel');
+
+    schedulePanel.classList.add('tab-hidden');
+    statsPanel.classList.add('tab-hidden');
+    logPanel.classList.add('tab-hidden');
+
+    document.getElementById('tabBtnSchedule').classList.remove('active');
+    document.getElementById('tabBtnStats').classList.remove('active');
+    document.getElementById('tabBtnLog').classList.remove('active');
+
+    if (tab === 'schedule') {
+        schedulePanel.classList.remove('tab-hidden');
+        document.getElementById('tabBtnSchedule').classList.add('active');
+    } else if (tab === 'stats') {
+        statsPanel.classList.remove('tab-hidden');
+        document.getElementById('tabBtnStats').classList.add('active');
+    } else {
+        logPanel.classList.remove('tab-hidden');
+        document.getElementById('tabBtnLog').classList.add('active');
+    }
+}
+
+// --- 初始化：手机端默认只显示课表 tab ---
+(function initTabs() {
+    if (isMobileLayout()) {
+        switchTab('schedule');
+    }
+    // 窗口 resize 时若切回桌面，确保所有面板可见
+    window.addEventListener('resize', () => {
+        if (!isMobileLayout()) {
+            ['schedulePanel','statsPanel','logPanel'].forEach(id => {
+                document.getElementById(id).classList.remove('tab-hidden');
+            });
+        } else {
+            // 切回手机时恢复 tab 状态，根据哪个按钮 active 来决定
+            const activeBtn = document.querySelector('.tab-btn.active');
+            if (activeBtn) {
+                const id = activeBtn.id;
+                if (id === 'tabBtnSchedule') switchTab('schedule');
+                else if (id === 'tabBtnStats') switchTab('stats');
+                else switchTab('log');
+            } else {
+                switchTab('schedule');
+            }
+        }
+    });
+})();
+
+// --- 日志染色 ---
+function colorLine(raw) {
+    const e = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    let c = 'def';
+    if      (e.includes('[成功]') || (e.includes('成功') && !e.includes('失败'))) c = 'ok';
+    else if (e.includes('[失败]') || e.includes('[异常]') || e.includes('失败') || e.includes('异常') || e.includes('错误') || e.includes('超时')) c = 'err';
+    else if (e.includes('[警告]') || e.includes('警告') || e.includes('过期')) c = 'wrn';
+    else if (e.includes('[发现签到]') || e.includes('[发现测验]') || e.includes('[发现资料]')) c = 'hot';
+    else if (e.includes('DeepSeek') || e.includes('AI') || e.includes('试卷') || e.includes('答题') || e.includes('交卷')) c = 'ai';
+    else if (e.includes('高警戒') || e.includes('低频') || e.includes('巡查') || e.includes('扫描')) c = 'scn';
+    else if (e.includes('待机')) c = 'slp';
+    else if (e.includes('自动登录') || e.includes('Cookie') || e.includes('续期') || e.includes('刷新')) c = 'lgn';
+    const withTs = e.replace(/^(\[\d{2}:\d{2}:\d{2}\])/, '<span class="ts">$1</span>');
+    return `<span class="ll ${c}">${withTs}</span>`;
+}
+
+const FILTER_KW = {
+    checkin: ['签到','点名'],
+    error:   ['[失败]','[异常]','失败','异常','错误','超时'],
+    login:   ['自动登录','Cookie','续期'],
+    ai:      ['DeepSeek','AI','试卷','答题','交卷'],
+};
+let curFilter = 'all', allLogs = [], lastLogLen = 0;
+
+function applyFilter(logs) {
+    if (curFilter === 'all') return logs;
+    const kw = FILTER_KW[curFilter] || [];
+    return logs.filter(l => kw.some(k => l.includes(k)));
+}
+function renderLogs(force) {
+    const term = document.getElementById('termBox');
+    const atBottom = term.scrollHeight - term.clientHeight <= term.scrollTop + 35;
+    if (force) term.innerHTML = applyFilter(allLogs).map(colorLine).join('');
+    if (atBottom) term.scrollTop = term.scrollHeight;
+}
+document.querySelectorAll('.fbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        curFilter = btn.dataset.f;
+        renderLogs(true);
+    });
+});
+
+// --- 时钟 ---
+function tick() {
+    document.getElementById('clock').textContent =
+        new Date().toLocaleTimeString('zh-CN', {hour12: false});
+}
+setInterval(tick, 1000); tick();
+
+// --- 渲染操作记录 ---
+const _OPS_TYPE = {checkin: '签到', exam: '答题', material: '资料'};
+const _OPS_CLS  = {checkin: 'ops-badge-checkin', exam: 'ops-badge-exam', material: 'ops-badge-material'};
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderOperations(ops) {
+    const list    = document.getElementById('opsList');
+    const countEl = document.getElementById('opsCount');
+    if (!ops || !ops.length) {
+        list.innerHTML = '<div class="ops-empty">暂无操作记录</div>';
+        if (countEl) countEl.textContent = '';
+        return;
+    }
+    if (countEl) countEl.textContent = '最近 ' + ops.length + ' 条';
+    list.innerHTML = ops.map(o => {
+        const badge = _OPS_CLS[o.type] || 'ops-badge-material';
+        const label = _OPS_TYPE[o.type] || o.type;
+        const stCls = o.success ? 'ops-ok' : 'ops-fail';
+        const stTxt = o.success ? '成功' : '失败';
+        return '<div class="ops-row">'
+            + '<span class="ops-time">' + esc(o.time) + '</span>'
+            + '<span class="ops-badge ' + badge + '">' + label + '</span>'
+            + '<span class="ops-course" title="' + esc(o.course) + '">' + esc(o.course) + '</span>'
+            + '<span class="ops-detail" title="' + esc(o.detail) + '">' + esc(o.detail) + '</span>'
+            + '<span class="ops-status ' + stCls + '">' + stTxt + '</span>'
+            + '</div>';
+    }).join('');
+}
+
+// --- 更新统计信息 ---
+function updateStatistics() {
+    const token = getToken();
+    if (!token) return;
+    fetch('/api/statistics', {headers: authHeaders()})
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.statistics) return;
+            const stats = data.statistics;
+            document.getElementById('statUptime').textContent = stats.uptime_human || '--';
+            const checkin = stats.checkin || {};
+            document.getElementById('statCheckinSuccess').textContent = checkin.success || 0;
+            document.getElementById('statCheckinRate').textContent    = checkin.success_rate || '--';
+            const exam = stats.exam || {};
+            document.getElementById('statExamSuccess').textContent   = exam.success || 0;
+            document.getElementById('statExamQuestions').textContent = '共 ' + (exam.questions || 0) + ' 题';
+            const material = stats.material || {};
+            document.getElementById('statMaterialSuccess').textContent = material.success || 0;
+            const deepseek = stats.deepseek || {};
+            document.getElementById('statCacheHits').textContent = deepseek.cache_hits || 0;
+            document.getElementById('statCacheRate').textContent = deepseek.cache_hit_rate || '--';
+            const errors = stats.errors || {};
+            document.getElementById('statErrors').textContent = errors.total || 0;
+            renderOperations(data.operations || []);
+        })
+        .catch(() => {});
+}
+setInterval(updateStatistics, 5000);
+setTimeout(updateStatistics, 1000);
+
+// --- 模式标签 ---
+function setMode(m) {
+    const tag = document.getElementById('modeTag');
+    const dot = '<span class="mode-dot"></span>';
+    const map = {
+        fast: ['mode-fast',  dot + ' 高警戒'],
+        slow: ['mode-slow',  dot + ' 低频巡查'],
+    };
+    if (map[m]) {
+        tag.className = map[m][0];
+        tag.innerHTML = map[m][1];
+    } else {
+        tag.className = 'mode-sleep';
+        tag.innerHTML = dot + ' 待机中';
+    }
+}
+
+// --- Token 认证辅助 ---
+const TOKEN_STORAGE_KEY = 'api_token';
+let authWarned = false;
+
+function getToken() {
+    return localStorage.getItem(TOKEN_STORAGE_KEY) || '';
+}
+function authHeaders() {
+    const t = getToken();
+    return t ? {'Authorization': 'Bearer ' + t} : {};
+}
+function renderNeedToken() {
+    renderSchedule({}, '请输入顶部 Token 后开始连接');
+    document.getElementById('loginLabel').textContent = '等待 Token';
+}
+function createCourseCard(icid, info) {
+    const dom = document.createElement('div');
+    dom.className = 'course-link';
+    dom.id = 'course-' + icid;
+    const cname = (info && info.name) ? info.name : '未命名课程';
+    dom.textContent = cname;
+
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    const retroBtn = document.createElement('button');
+    retroBtn.className = 'card-btn retro-btn';
+    retroBtn.textContent = '补签';
+    retroBtn.title = '手动触发签到';
+    retroBtn.onclick = function(e) {
+        e.stopPropagation();
+        retroCheckin(icid, cname, retroBtn);
+    };
+    actions.appendChild(retroBtn);
+
+    const hwBtn = document.createElement('button');
+    hwBtn.className = 'card-btn hw-btn';
+    hwBtn.textContent = '作业';
+    hwBtn.title = '查看未完成作业/测验';
+    hwBtn.onclick = function(e) {
+        e.stopPropagation();
+        openHomeworkModal(icid, cname);
+    };
+    actions.appendChild(hwBtn);
+
+    dom.appendChild(actions);
+    return dom;
+}
+function renderSchedule(courses, message) {
+    const schBox = document.getElementById('scheduleBox');
+    schBox.replaceChildren();
+    const entries = Object.entries(courses || {});
+    if (!entries.length) {
+        const empty = document.createElement('p');
+        empty.className = 'schedule-empty';
+        empty.textContent = message || '暂无课表数据';
+        schBox.appendChild(empty);
+        return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'schedule-grid';
+    for (const [icid, info] of entries) {
+        grid.appendChild(createCourseCard(icid, info));
+    }
+    schBox.appendChild(grid);
+}
+function saveToken() {
+    const val = document.getElementById('tokenInput').value.trim();
+    if (val) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, val);
+        authWarned = false;
+        updateAll();
+    }
+}
+document.getElementById('tokenInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveToken();
+});
+
+// --- 主轮询 ---
+function updateAll() {
+    const token = getToken();
+    if (!token) { authWarned = false; renderNeedToken(); return; }
+
+    fetch('/api/data', {headers: authHeaders()}).then(r => {
+        if (r.status === 401) {
+            if (!authWarned) {
+                authWarned = true;
+                document.getElementById('loginLabel').textContent = 'Token 无效';
+                renderSchedule({}, '认证失败，请检查顶部 Token');
+            }
+            return null;
+        }
+        authWarned = false;
+        return r.json();
+    }).then(data => {
+        if (!data) return;
+        const courses = data.courses || {};
+        renderSchedule(courses, data.schedule_text);
+        document.getElementById('courseCount').textContent = Object.keys(courses).length || '—';
+
+        for (const [icid, info] of Object.entries(courses)) {
+            const dom = document.getElementById('course-' + icid);
+            if (!dom) continue;
+            if (info.checked && !dom.classList.contains('course-checked'))
+                dom.classList.add('course-checked');
+            if (info.material_count > 0 && info.material_count != dom.dataset.mc) {
+                dom.dataset.mc = info.material_count;
+                let b = dom.querySelector('.mat-badge');
+                if (!b) { b = document.createElement('div'); b.className = 'mat-badge'; dom.appendChild(b); }
+                b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>${info.material_count}`;
+            }
+            if (info.exam_count > 0 && info.exam_count != dom.dataset.ec) {
+                dom.dataset.ec = info.exam_count;
+                let b2 = dom.querySelector('.exam-badge');
+                if (!b2) { b2 = document.createElement('div'); b2.className = 'exam-badge'; dom.appendChild(b2); }
+                b2.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>${info.exam_count}`;
+            }
+        }
+
+        setMode(data.mode);
+        if (data.last_login > 0) {
+            const d = new Date(data.last_login * 1000);
+            document.getElementById('loginLabel').textContent =
+                'Cookie · ' + d.toLocaleTimeString('zh-CN', {hour12:false, hour:'2-digit', minute:'2-digit'}) + ' 刷新';
+        }
+        if (data.logs && data.logs.length !== lastLogLen) {
+            allLogs = data.logs; lastLogLen = allLogs.length;
+            renderLogs(true);
+        }
+    }).catch(() => {});
+}
+setInterval(updateAll, 1000); updateAll();
+
+// --- 刷新课表 ---
+function refreshSchedule() {
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('loading');
+    fetch('/api/refresh', {method:'POST', headers: authHeaders()})
+        .then(r => r.json())
+        .then(() => {
+            renderSchedule({}, '课表刷新中，请稍候…');
+            setTimeout(() => btn.classList.remove('loading'), 3000);
+        })
+        .catch(() => btn.classList.remove('loading'));
+}
+
+// --- 补签 ---
+function retroCheckin(icid, cname, btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = '...';
+    btn.style.opacity = '0.5';
+
+    fetch('/api/checkin/retro', {
+        method: 'POST',
+        headers: Object.assign(authHeaders(), {'Content-Type': 'application/json'}),
+        body: JSON.stringify({icid: icid, cname: cname})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.textContent = data.success ? 'OK' : '失败';
+        btn.style.color = data.success ? '#10b981' : '#ef4444';
+        setTimeout(function() {
+            btn.textContent = orig;
+            btn.style.color = '';
+            btn.disabled = false;
+            btn.style.opacity = '';
+        }, 3000);
+    })
+    .catch(function() {
+        btn.textContent = '错误';
+        btn.style.color = '#ef4444';
+        setTimeout(function() {
+            btn.textContent = orig;
+            btn.style.color = '';
+            btn.disabled = false;
+            btn.style.opacity = '';
+        }, 3000);
+    });
+}
+
+// --- 作业补做弹窗 ---
+var _hwItems = [];
+
+function openHomeworkModal(icid, cname) {
+    var modal = document.getElementById('hwModal');
+    var listEl = document.getElementById('hwItemList');
+    listEl.innerHTML = '<div class="hw-loading">正在扫描...</div>';
+    document.getElementById('hwCourseName').textContent = cname + ' - 作业补做';
+    modal.dataset.icid = icid;
+    modal.dataset.cname = cname;
+    modal.style.display = 'flex';
+
+    fetch('/api/homework/scan?icid=' + encodeURIComponent(icid), {headers: authHeaders()})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            _hwItems = data.items || [];
+            if (!_hwItems.length) {
+                listEl.innerHTML = '<div class="hw-empty">没有未完成的作业或测验</div>';
+                document.getElementById('hwSubmitBtn').style.display = 'none';
+                return;
+            }
+            document.getElementById('hwSubmitBtn').style.display = '';
+            var html = '';
+            for (var i = 0; i < _hwItems.length; i++) {
+                var item = _hwItems[i];
+                html += '<label class="hw-item-row">'
+                    + '<input type="checkbox" data-idx="' + i + '" checked>'
+                    + '<span class="hw-item-type">' + escHtml(item.typeName) + '</span>'
+                    + '<span class="hw-item-name">' + escHtml(item.name) + '</span>'
+                    + '</label>';
+            }
+            listEl.innerHTML = html;
+        })
+        .catch(function() {
+            listEl.innerHTML = '<div class="hw-empty">扫描失败，请重试</div>';
+            document.getElementById('hwSubmitBtn').style.display = 'none';
+        });
+}
+
+function closeHomeworkModal() {
+    document.getElementById('hwModal').style.display = 'none';
+}
+
+function escHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+}
+
+function submitSelectedHomework() {
+    var modal = document.getElementById('hwModal');
+    var icid = modal.dataset.icid;
+    var cname = modal.dataset.cname;
+    var checkboxes = document.querySelectorAll('#hwItemList input[type="checkbox"]:checked');
+    var selected = [];
+    for (var c = 0; c < checkboxes.length; c++) {
+        selected.push(_hwItems[parseInt(checkboxes[c].dataset.idx)]);
+    }
+
+    if (!selected.length) { alert('请至少选择一项'); return; }
+
+    var btn = document.getElementById('hwSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = '正在补做中...';
+
+    var completed = 0;
+    var total = selected.length;
+
+    function processNext(idx) {
+        if (idx >= total) {
+            btn.textContent = '完成 (' + completed + '/' + total + ')';
+            setTimeout(function() {
+                btn.disabled = false;
+                btn.textContent = '一键补做';
+                closeHomeworkModal();
+            }, 2000);
+            return;
+        }
+        var item = selected[idx];
+        btn.textContent = '正在做 (' + (idx+1) + '/' + total + '): ' + (item.name || '').substring(0, 10);
+
+        fetch('/api/homework/submit', {
+            method: 'POST',
+            headers: Object.assign(authHeaders(), {'Content-Type': 'application/json'}),
+            body: JSON.stringify({
+                icid: icid,
+                courseElmentId: item.courseElmentId,
+                cname: cname,
+                examName: item.name
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) completed++;
+            processNext(idx + 1);
+        })
+        .catch(function() { processNext(idx + 1); });
+    }
+    processNext(0);
+}
+
+// --- 全部扫描 ---
+var _scanAllData = null;
+
+function scanAllCourses() {
+    var btn = document.getElementById('scanAllBtn');
+    btn.classList.add('loading');
+    var modal = document.getElementById('scanModal');
+    var listEl = document.getElementById('scanItemList');
+    var summaryEl = document.getElementById('scanSummary');
+    listEl.innerHTML = '<div class="hw-loading">正在扫描所有课程...</div>';
+    summaryEl.textContent = '';
+    document.getElementById('scanProcessBtn').style.display = 'none';
+    modal.style.display = 'flex';
+
+    fetch('/api/scan-all', {headers: authHeaders()})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            _scanAllData = data;
+            btn.classList.remove('loading');
+            var totalItems = data.total_items || 0;
+            var totalSignins = data.total_signins || 0;
+            summaryEl.textContent = '发现 ' + totalItems + ' 个待办项，' + totalSignins + ' 个活跃签到';
+
+            var html = '';
+            var pendingList = [];
+            for (var icid in data.courses) {
+                var course = data.courses[icid];
+                var cname = course.name;
+                var items = course.items || [];
+                var hasSignin = course.has_active_signin;
+
+                if (!items.length && !hasSignin) continue;
+
+                html += '<div class="scan-course-group">';
+                html += '<div class="scan-course-name">' + escHtml(cname) + '</div>';
+
+                if (hasSignin) {
+                    html += '<div class="scan-item-row">'
+                        + '<input type="checkbox" data-cat="signin" data-icid="' + icid + '" data-cname="' + escHtml(cname) + '" checked>'
+                        + '<span class="scan-item-cat scan-cat-signin">签到</span>'
+                        + '<span class="scan-item-name">检测到活跃签到</span>'
+                        + '</div>';
+                    pendingList.push({category:'signin', icid:icid, cname:cname, name:'签到', courseElmentId:''});
+                }
+
+                for (var j = 0; j < items.length; j++) {
+                    var item = items[j];
+                    var catClass = item.category === 'exam' ? 'scan-cat-exam' : 'scan-cat-material';
+                    var catLabel = item.category === 'exam' ? (item.typeName || '测验') : '资料';
+                    html += '<div class="scan-item-row">'
+                        + '<input type="checkbox" data-cat="' + item.category + '" data-icid="' + icid
+                        + '" data-cname="' + escHtml(cname) + '" data-eid="' + item.courseElmentId
+                        + '" data-name="' + escHtml(item.name) + '" data-type="' + escHtml(item.typeName) + '" checked>'
+                        + '<span class="scan-item-cat ' + catClass + '">' + escHtml(catLabel) + '</span>'
+                        + '<span class="scan-item-name">' + escHtml(item.name) + '</span>'
+                        + '</div>';
+                    pendingList.push({
+                        category: item.category,
+                        icid: icid,
+                        cname: cname,
+                        name: item.name,
+                        courseElmentId: item.courseElmentId,
+                        typeName: item.typeName
+                    });
+                }
+                html += '</div>';
+            }
+
+            if (!pendingList.length) {
+                listEl.innerHTML = '<div class="hw-empty">没有发现待办项，所有课程都是最新的！</div>';
+            } else {
+                listEl.innerHTML = html;
+                document.getElementById('scanProcessBtn').style.display = '';
+            }
+            _scanAllData._pendingList = pendingList;
+        })
+        .catch(function() {
+            btn.classList.remove('loading');
+            listEl.innerHTML = '<div class="hw-empty">扫描失败，请重试</div>';
+        });
+}
+
+function closeScanModal() {
+    document.getElementById('scanModal').style.display = 'none';
+}
+
+function processAllItems() {
+    if (!_scanAllData || !_scanAllData._pendingList) return;
+
+    var checkboxes = document.querySelectorAll('#scanItemList input[type="checkbox"]:checked');
+    var selected = [];
+    for (var c = 0; c < checkboxes.length; c++) {
+        var cb = checkboxes[c];
+        selected.push({
+            category: cb.dataset.cat,
+            icid: cb.dataset.icid,
+            cname: cb.dataset.cname,
+            courseElmentId: cb.dataset.eid || '',
+            name: cb.dataset.name || '',
+            typeName: cb.dataset.type || ''
+        });
+    }
+
+    if (!selected.length) { alert('请至少选择一项'); return; }
+
+    var btn = document.getElementById('scanProcessBtn');
+    btn.disabled = true;
+    btn.textContent = '正在处理...';
+
+    var completed = 0;
+    var total = selected.length;
+
+    function processNext(idx) {
+        if (idx >= total) {
+            btn.textContent = '完成 (' + completed + '/' + total + ')';
+            setTimeout(function() {
+                btn.disabled = false;
+                btn.textContent = '全部处理';
+                closeScanModal();
+            }, 2000);
+            return;
+        }
+        var item = selected[idx];
+        var label = item.name ? item.name.substring(0, 12) : item.category;
+        btn.textContent = '正在处理 (' + (idx+1) + '/' + total + '): ' + label;
+
+        var url, body;
+        if (item.category === 'signin') {
+            url = '/api/checkin/retro';
+            body = JSON.stringify({icid: item.icid, cname: item.cname});
+        } else if (item.category === 'exam') {
+            url = '/api/homework/submit';
+            body = JSON.stringify({icid: item.icid, courseElmentId: item.courseElmentId, cname: item.cname, examName: item.name});
+        } else {
+            url = '/api/material/reply';
+            body = JSON.stringify({courseElmentId: item.courseElmentId, cname: item.cname, itemName: item.name});
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: Object.assign(authHeaders(), {'Content-Type': 'application/json'}),
+            body: body
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) completed++;
+            processNext(idx + 1);
+        })
+        .catch(function() { processNext(idx + 1); });
+    }
+    processNext(0);
+}
+
+// --- 初始化 Token ---
+(function() {
+    const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (saved) document.getElementById('tokenInput').value = saved;
+})();
+</script>
+
+<!-- 作业补做弹窗 -->
+<div id="hwModal" class="hw-modal" style="display:none">
+    <div class="hw-modal-content">
+        <div class="hw-modal-header">
+            <h3 id="hwCourseName">作业补做</h3>
+            <button class="hw-close" onclick="closeHomeworkModal()">&times;</button>
+        </div>
+        <div id="hwItemList" class="hw-item-list">
+            <div class="hw-empty">正在扫描...</div>
+        </div>
+        <div class="hw-modal-footer">
+            <button id="hwSubmitBtn" class="hw-submit-btn" onclick="submitSelectedHomework()">一键补做</button>
+        </div>
+    </div>
+</div>
+
+<!-- 全部扫描弹窗 -->
+<div id="scanModal" class="scan-modal" style="display:none">
+    <div class="scan-modal-content">
+        <div class="scan-modal-header">
+            <h3>全部扫描结果</h3>
+            <button class="scan-close" onclick="closeScanModal()">&times;</button>
+        </div>
+        <div id="scanSummary" class="scan-summary"></div>
+        <div id="scanItemList" class="scan-item-list">
+            <div class="hw-empty">正在扫描...</div>
+        </div>
+        <div class="scan-modal-footer">
+            <button id="scanProcessBtn" class="scan-process-btn" onclick="processAllItems()" style="display:none">全部处理</button>
+            <button class="scan-cancel-btn" onclick="closeScanModal()">关闭</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

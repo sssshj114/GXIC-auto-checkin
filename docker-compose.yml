@@ -1,0 +1,68 @@
+services:
+  auto-checkin:
+    build: .
+    image: pixe1/auto-checkin:latest
+    container_name: pixe1-auto-checkin
+    restart: unless-stopped
+    ports:
+      - "${UI_PORT:-23891}:8080"
+
+    volumes:
+      - checkin-data:/data
+
+    environment:
+      # ===== 核心凭证 =====
+      - COOKIE=${COOKIE}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - UI_TOKEN=${UI_TOKEN:-changeme-autocheckin-token}
+      - BASE_URL=${BASE_URL:-https://gxic.itolearn.com}
+      - COOKIE_PERSIST_ENABLED=${COOKIE_PERSIST_ENABLED:-false}
+
+      # ===== 自动登录（Cookie自动续期）=====
+      - WEIXIN_ID=${WEIXIN_ID}
+      - STUDENT_CODE=${STUDENT_CODE}
+      - LOGIN_PASSWORD=${LOGIN_PASSWORD}
+      - PHOTO_ADDRESS=${PHOTO_ADDRESS}
+
+      # ===== 作息时间（可选）=====
+      - HIGH_ALERT_BEFORE=${HIGH_ALERT_BEFORE:-5}
+      - HIGH_ALERT_AFTER=${HIGH_ALERT_AFTER:-20}
+
+      # ===== 扫描间隔（可选，单位：秒）=====
+      - FAST_SCAN_INTERVAL_MIN=${FAST_SCAN_INTERVAL_MIN:-12}
+      - FAST_SCAN_INTERVAL_MAX=${FAST_SCAN_INTERVAL_MAX:-20}
+      - SLOW_SCAN_INTERVAL_MIN=${SLOW_SCAN_INTERVAL_MIN:-180}
+      - SLOW_SCAN_INTERVAL_MAX=${SLOW_SCAN_INTERVAL_MAX:-300}
+      - CHECKIN_DELAY_MIN=${CHECKIN_DELAY_MIN:-5}
+      - CHECKIN_DELAY_MAX=${CHECKIN_DELAY_MAX:-18}
+      - MATERIAL_REPLY_DELAY_MIN=${MATERIAL_REPLY_DELAY_MIN:-10}
+      - MATERIAL_REPLY_DELAY_MAX=${MATERIAL_REPLY_DELAY_MAX:-35}
+      - EXAM_THINK_TIME_MIN=${EXAM_THINK_TIME_MIN:-3}
+      - EXAM_THINK_TIME_MAX=${EXAM_THINK_TIME_MAX:-12}
+
+      # ===== 线程池 =====
+      - EXECUTOR_MAX_WORKERS=${EXECUTOR_MAX_WORKERS:-10}
+
+      # ===== 日志 =====
+      - MAX_LOG_SIZE_MB=${MAX_LOG_SIZE_MB:-5}
+      - MAX_LOG_LINES=${MAX_LOG_LINES:-100}
+
+      # ===== 错误抑制 =====
+      - ERROR_SUPPRESSION_ENABLED=${ERROR_SUPPRESSION_ENABLED:-true}
+      - ERROR_SUPPRESSION_WINDOW=${ERROR_SUPPRESSION_WINDOW:-60}
+
+      # ===== 系统 =====
+      - HEADLESS=1
+      - DATA_DIR=/data
+      - TZ=Asia/Shanghai
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  checkin-data:
